@@ -1,6 +1,10 @@
 # 扫雷
 
-一个不用装任何东西的网页版扫雷。双击 `index.html` 就能玩。
+一个不用装任何东西的网页版扫雷。
+
+**在线玩：<https://p-y-peng.github.io/minesweeper/>**
+
+也可以把仓库下载下来，双击 `index.html` 本地玩。
 
 ## 玩法
 
