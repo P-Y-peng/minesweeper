@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>扫雷</title>
+<style>
+  :root {
+    --bg-a: #eef1f7;
+    --bg-b: #fafbfd;
+    --panel: #ffffff;
+    --line: #dbe2ee;
+    --text: #1f2430;
+    --muted: #6b7488;
+    --hidden-a: #dfe6f3;
+    --hidden-b: #c8d3e6;
+    --hidden-hover-a: #e9eef8;
+    --hidden-hover-b: #d3dcee;
+    --open: #f3f5f9;
+    --open-line: #e2e7f0;
+    --flag-bg: #ffe9c9;
+    --mine-bg: #ffdede;
+    --accent: #3b6ef6;
+    --shadow: 0 10px 30px rgba(30, 45, 80, .12);
+    --n1: #1f6feb; --n2: #14804a; --n3: #d1242f; --n4: #6f42c1;
+    --n5: #9a3412; --n6: #0e7490; --n7: #24292f; --n8: #6b7280;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-a: #14161b;
+      --bg-b: #191c22;
+      --panel: #1d2129;
+      --line: #2b3140;
+      --text: #e6e9f0;
+      --muted: #99a1b3;
+      --hidden-a: #333a4b;
+      --hidden-b: #262c39;
+      --hidden-hover-a: #3d4557;
+      --hidden-hover-b: #2e3543;
+      --open: #1a1e25;
+      --open-line: #262c37;
+      --flag-bg: #4a3a1d;
+      --mine-bg: #4a2222;
+      --accent: #6f96ff;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+      --n1: #6ea8fe; --n2: #4ade80; --n3: #fb7185; --n4: #c084fc;
+      --n5: #fdba74; --n6: #67e8f9; --n7: #e5e7eb; --n8: #9ca3af;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: var(--text);
+    background: radial-gradient(1200px 700px at 50% -10%, var(--bg-b), var(--bg-a));
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px 48px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    width: max-content;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-size: 20px;
+    letter-spacing: .08em;
+    margin: 0;
+    font-weight: 650;
+  }
+
+  h1 small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0;
+    margin-left: 8px;
+  }
+
+  .levels {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(20, 30, 60, .04);
+  }
+
+  .levels button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+
+  .levels button:hover { color: var(--text); }
+
+  .levels button[aria-pressed="true"] {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .counter {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: .04em;
+    min-width: 74px;
+    padding: 4px 10px;
+    border-radius: 9px;
+    background: var(--open);
+    border: 1px solid var(--open-line);
+    color: var(--text);
+  }
+
+  .counter span {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0;
+    margin-left: 4px;
+  }
+
+  .counter.flags { text-align: left; }
+  .counter.time { text-align: right; }
+
+  .face {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    font-size: 24px;
+    line-height: 1;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--open);
+    cursor: pointer;
+    transition: transform .08s, background .15s;
+  }
+
+  .face:hover { background: var(--hidden-hover-a); }
+  .face:active { transform: scale(.94); }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--cell));
+    gap: 2px;
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--open);
+    border: 1px solid var(--open-line);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .board.shake { animation: shake .28s ease-in-out; }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .cell {
+    width: var(--cell);
+    height: var(--cell);
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--cell) * .18);
+    font: inherit;
+    font-size: calc(var(--cell) * .56);
+    font-weight: 700;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    background: linear-gradient(160deg, var(--hidden-a), var(--hidden-b));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 1px 1px rgba(20, 30, 60, .12);
+    transition: background .1s, transform .06s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cell:hover:not(.open) {
+    background: linear-gradient(160deg, var(--hidden-hover-a), var(--hidden-hover-b));
+  }
+
+  .cell:active:not(.open) { transform: scale(.96); }
+
+  .cell:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    z-index: 1;
+  }
+
+  .cell.open {
+    background: var(--open);
+    cursor: default;
+    box-shadow: inset 0 0 0 1px var(--open-line);
+  }
+
+  .cell.flagged {
+    background: linear-gradient(160deg, var(--flag-bg), var(--flag-bg));
+  }
+
+  .cell.boom {
+    background: var(--mine-bg);
+  }
+
+  .cell.wrong {
+    background: var(--mine-bg);
+    opacity: .85;
+  }
+
+  .cell.n1 { color: var(--n1); }
+  .cell.n2 { color: var(--n2); }
+  .cell.n3 { color: var(--n3); }
+  .cell.n4 { color: var(--n4); }
+  .cell.n5 { color: var(--n5); }
+  .cell.n6 { color: var(--n6); }
+  .cell.n7 { color: var(--n7); }
+  .cell.n8 { color: var(--n8); }
+
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--muted);
+    padding: 0 2px;
+  }
+
+  .status.win { color: var(--n2); font-weight: 600; }
+  .status.lose { color: var(--n3); font-weight: 600; }
+
+  kbd {
+    font: inherit;
+    font-size: 11px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--open);
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <h1>扫雷 <small>左键翻开 · 右键插旗</small></h1>
+    <div class="levels" id="levels" role="group" aria-label="难度">
+      <button type="button" data-level="beginner" aria-pressed="true">初级</button>
+      <button type="button" data-level="intermediate" aria-pressed="false">中级</button>
+      <button type="button" data-level="expert" aria-pressed="false">高级</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="hud">
+      <div class="counter flags" id="mineCount">10<span>雷</span></div>
+      <button type="button" class="face" id="face" aria-label="重新开始">🙂</button>
+      <div class="counter time" id="timer">000<span>秒</span></div>
+    </div>
+    <div class="board" id="board" role="grid" aria-label="雷区"></div>
+  </div>
+
+  <div class="foot">
+    <div class="status" id="status">第一次点击一定不会踩雷，放心点。</div>
+    <div id="best"></div>
+  </div>
+</div>
+
+<script src="minesweeper.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const MS = window.Minesweeper;
+  const boardEl = document.getElementById("board");
+  const mineCountEl = document.getElementById("mineCount");
+  const timerEl = document.getElementById("timer");
+  const faceEl = document.getElementById("face");
+  const statusEl = document.getElementById("status");
+  const bestEl = document.getElementById("best");
+  const levelsEl = document.getElementById("levels");
+
+  const state = {
+    level: "beginner",
+    board: null,
+    els: [],
+    seconds: 0,
+    ticking: null,
+    suppressClick: false,
+    longPressTimer: null,
+    longPressIndex: -1
+  };
+
+  // 调试用：在浏览器控制台敲 __minesweeper 就能看到当前局面
+  window.__minesweeper = state;
+
+  /* ---------------- 计时与纪录 ---------------- */
+
+  function stopClock() {
+    if (state.ticking !== null) {
+      clearInterval(state.ticking);
+      state.ticking = null;
+    }
+  }
+
+  function startClock() {
+    if (state.ticking !== null) return;
+    state.ticking = setInterval(function () {
+      state.seconds = Math.min(999, state.seconds + 1);
+      paintTimer();
+    }, 1000);
+  }
+
+  function paintTimer() {
+    timerEl.firstChild.nodeValue = String(state.seconds).padStart(3, "0");
+  }
+
+  function bestKey() {
+    return "minesweeper.best." + state.level;
+  }
+
+  function readBest() {
+    try {
+      const raw = localStorage.getItem(bestKey());
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeBest(seconds) {
+    try {
+      localStorage.setItem(bestKey(), String(seconds));
+    } catch (e) {
+      /* 隐私模式下写不了就算了 */
+    }
+  }
+
+  function paintBest(highlight) {
+    const best = readBest();
+    bestEl.textContent = best === null
+      ? "还没有纪录"
+      : (highlight ? "新纪录 " + best + " 秒" : "最佳 " + best + " 秒");
+  }
+
+  /* ---------------- 渲染 ---------------- */
+
+  function cellLabel(index, cell) {
+    const r = Math.floor(index / state.board.cols);
+    const c = index % state.board.cols;
+    const where = "第 " + (r + 1) + " 行第 " + (c + 1) + " 列";
+    if (cell.state === MS.FLAGGED) return where + "，已插旗";
+    if (cell.state === MS.HIDDEN) return where + "，未翻开";
+    if (cell.mine) return where + "，地雷";
+    return where + "，" + (cell.adj === 0 ? "空白" : cell.adj + " 颗相邻雷");
+  }
+
+  function paintCell(index) {
+    const board = state.board;
+    const cell = board.cells[index];
+    const el = state.els[index];
+    if (!el) return;
+
+    el.className = "cell";
+    el.textContent = "";
+    let label = cellLabel(index, cell);
+
+    if (cell.state === MS.FLAGGED) {
+      el.classList.add("flagged");
+      el.textContent = "🚩";
+      // 输棋时标出插错的旗，插对的旗保持原样
+      if (board.over && !board.won && !cell.mine) {
+        el.classList.add("wrong");
+        el.textContent = "❌";
+      }
+    } else if (cell.state === MS.HIDDEN) {
+      el.textContent = "";
+    } else if (cell.mine) {
+      el.classList.add("open", "boom");
+      el.textContent = "💣";
+    } else {
+      el.classList.add("open");
+      if (cell.adj > 0) {
+        el.classList.add("n" + cell.adj);
+        el.textContent = String(cell.adj);
+      }
+    }
+    el.setAttribute("aria-label", label);
+  }
+
+  function paintAll() {
+    for (let i = 0; i < state.board.cells.length; i++) paintCell(i);
+  }
+
+  function paintCounters() {
+    const left = state.board.mines - state.board.flagCount;
+    mineCountEl.firstChild.nodeValue = String(left);
+  }
+
+  function boardCellFromEvent(event) {
+    const el = event.target.closest ? event.target.closest(".cell") : null;
+    if (!el || !el.dataset.index) return -1;
+    return Number(el.dataset.index);
+  }
+
+  /* ---------------- 动作 ---------------- */
+
+  function revealAt(index) {
+    if (index < 0) return;
+    const board = state.board;
+    const r = Math.floor(index / board.cols);
+    const c = index % board.cols;
+    const wasStarted = board.started;
+    const result = MS.reveal(board, r, c);
+
+    if (!wasStarted && board.started) startClock();
+
+    if (result.kind === "noop") return;
+    if (result.kind === "mine") {
+      stopClock();
+      paintAll();
+      setFace("😵");
+      boardEl.classList.add("shake");
+      setTimeout(function () { boardEl.classList.remove("shake"); }, 300);
+      setStatus("踩雷了。点笑脸再来一局。", "lose");
+      return;
+    }
+
+    result.opened.forEach(paintCell);
+    paintCounters();
+    paintCell(index);
+
+    if (result.kind === "win") {
+      stopClock();
+      paintAll();
+      setFace("😎");
+      onWin();
+      return;
+    }
+    setFace("🙂");
+  }
+
+  function flagAt(index) {
+    if (index < 0) return;
+    const board = state.board;
+    const r = Math.floor(index / board.cols);
+    const c = index % board.cols;
+    const result = MS.toggleFlag(board, r, c);
+    if (result.kind === "noop") return;
+    paintCell(index);
+    paintCounters();
+  }
+
+  function chordAt(index) {
+    if (index < 0) return;
+    const board = state.board;
+    const r = Math.floor(index / board.cols);
+    const c = index % board.cols;
+    const result = MS.chord(board, r, c);
+    if (result.kind === "noop") return;
+
+    result.opened.forEach(paintCell);
+    paintCounters();
+
+    if (result.kind === "mine") {
+      stopClock();
+      paintAll();
+      setFace("😵");
+      boardEl.classList.add("shake");
+      setTimeout(function () { boardEl.classList.remove("shake"); }, 300);
+      setStatus("踩雷了。点笑脸再来一局。", "lose");
+      return;
+    }
+    if (result.kind === "win") {
+      stopClock();
+      paintAll();
+      setFace("😎");
+      onWin();
+    }
+  }
+
+  function onWin() {
+    const seconds = state.seconds;
+    const previous = readBest();
+    const isRecord = previous === null || seconds < previous;
+    if (isRecord) writeBest(seconds);
+    paintBest(isRecord);
+    setStatus(isRecord ? "清场！新纪录 " + seconds + " 秒。" : "清场！用时 " + seconds + " 秒。", "win");
+  }
+
+  function setFace(ch) {
+    faceEl.textContent = ch;
+  }
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = "status" + (kind ? " " + kind : "");
+  }
+
+  /* ---------------- 新局 ---------------- */
+
+  function newGame(level) {
+    stopClock();
+    state.level = level || state.level;
+    const def = MS.DIFFICULTIES[state.level];
+    state.board = MS.createBoard(def.rows, def.cols, def.mines);
+    state.seconds = 0;
+    state.suppressClick = false;
+    state.longPressIndex = -1;
+    if (state.longPressTimer !== null) {
+      clearTimeout(state.longPressTimer);
+      state.longPressTimer = null;
+    }
+
+    boardEl.style.setProperty("--cols", def.cols);
+    fitCells(def.cols);
+    boardEl.innerHTML = "";
+    boardEl.setAttribute("aria-label", "雷区，" + def.label + "，" + def.rows + " 行 " + def.cols + " 列");
+
+    const frag = document.createDocumentFragment();
+    state.els = new Array(def.rows * def.cols);
+    for (let i = 0; i < state.els.length; i++) {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "cell";
+      el.dataset.index = String(i);
+      el.tabIndex = 0;
+      state.els[i] = el;
+      frag.appendChild(el);
+    }
+    boardEl.appendChild(frag);
+
+    paintTimer();
+    paintCounters();
+    paintBest(false);
+    setFace("🙂");
+    setStatus("第一次点击一定不会踩雷，放心点。");
+    paintAll();
+
+    Array.prototype.forEach.call(levelsEl.querySelectorAll("button"), function (btn) {
+      btn.setAttribute("aria-pressed", btn.dataset.level === state.level ? "true" : "false");
+    });
+  }
+
+  /** 按窗口宽度算格子大小，让高级难度也能塞进一屏。 */
+  function fitCells(cols) {
+    const panelPadding = 44;
+    const gap = 2;
+    const available = Math.min(window.innerWidth, 1400) - 32 - panelPadding;
+    const raw = Math.floor((available - gap * (cols - 1)) / cols);
+    const size = Math.max(18, Math.min(38, raw));
+    boardEl.style.setProperty("--cell", size + "px");
+  }
+
+  /* ---------------- 事件 ---------------- */
+
+  boardEl.addEventListener("click", function (event) {
+    if (state.suppressClick) {
+      state.suppressClick = false;
+      return;
+    }
+    const index = boardCellFromEvent(event);
+    if (index < 0) return;
+    revealAt(index);
+  });
+
+  boardEl.addEventListener("contextmenu", function (event) {
+    const index = boardCellFromEvent(event);
+    if (index < 0) return;
+    event.preventDefault();
+    flagAt(index);
+  });
+
+  boardEl.addEventListener("auxclick", function (event) {
+    if (event.button !== 1) return;
+    const index = boardCellFromEvent(event);
+    if (index < 0) return;
+    event.preventDefault();
+    chordAt(index);
+  });
+
+  boardEl.addEventListener("dblclick", function (event) {
+    const index = boardCellFromEvent(event);
+    if (index < 0) return;
+    event.preventDefault();
+    chordAt(index);
+  });
+
+  // 触摸/手写笔长按 = 插旗
+  boardEl.addEventListener("pointerdown", function (event) {
+    if (event.pointerType === "mouse") return;
+    const index = boardCellFromEvent(event);
+    if (index < 0) return;
+    state.longPressIndex = index;
+    state.longPressTimer = setTimeout(function () {
+      state.longPressTimer = null;
+      state.suppressClick = true;
+      // 手指按住不放、最后又在格子外松开时，click 不一定来；兜底清掉抑制位
+      setTimeout(function () { state.suppressClick = false; }, 700);
+      flagAt(index);
+      if (navigator.vibrate) navigator.vibrate(18);
+    }, 420);
+  });
+
+  function cancelLongPress() {
+    if (state.longPressTimer !== null) {
+      clearTimeout(state.longPressTimer);
+      state.longPressTimer = null;
+    }
+  }
+
+  boardEl.addEventListener("pointerup", cancelLongPress);
+  boardEl.addEventListener("pointercancel", cancelLongPress);
+  boardEl.addEventListener("pointerleave", cancelLongPress);
+
+  // 键盘：F 插旗，其余交给按钮自身的 Enter/Space
+  boardEl.addEventListener("keydown", function (event) {
+    const index = boardCellFromEvent(event);
+    if (index < 0) return;
+    if (event.key === "f" || event.key === "F") {
+      event.preventDefault();
+      flagAt(index);
+    } else if (event.key === "c" || event.key === "C") {
+      event.preventDefault();
+      chordAt(index);
+    }
+  });
+
+  levelsEl.addEventListener("click", function (event) {
+    const btn = event.target.closest("button[data-level]");
+    if (!btn) return;
+    newGame(btn.dataset.level);
+  });
+
+  faceEl.addEventListener("click", function () {
+    newGame(state.level);
+  });
+
+  window.addEventListener("resize", function () {
+    if (state.board) fitCells(state.board.cols);
+  });
+
+  newGame("beginner");
+})();
+</script>
+</body>
+</html>
